@@ -4,21 +4,19 @@ import { useEffect, useRef, useState } from 'react'
 const UploadImageComponent = (props) => {
 
    const fileInputRef = useRef(null)
-   const [selectedImage, setSelectedImage] = useState(null)
+   const gifAdded = props.gifAddedProp ? props.gifAddedProp : {}
 
 
    const handleUploadClick = () => {
       fileInputRef.current.click()
-
    }
    const handFileChange = (e) => {
       const selectedFile = e.target.files[0]
       props.mediaUploadFunction(selectedFile)
+      e.target.value = '' // peşpeşe aynı fotoğrafı yükleyebilmek için
    }
 
-
-
-   return <div onClick={handleUploadClick} className="hp_cnt_right_bottom_left_icons">
+   return <div style={gifAdded} onClick={handleUploadClick} className="hp_cnt_right_bottom_left_icons">
       <input
          type="file"
          className='medyaButon'

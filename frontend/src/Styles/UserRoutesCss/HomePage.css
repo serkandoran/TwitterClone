@@ -56,10 +56,10 @@
    align-items: stretch;
    box-sizing: border-box;
    flex-basis: auto;
-   width: 100%;
+   width: 598px;
    position: fixed;
    max-width: 600px;
-   z-index: 10;
+   z-index: 5;
 }
 
 .homepage_content_body_header>nav {
@@ -194,7 +194,7 @@
    border: none;
    max-width: 504px;
    font-size: 20px;
-   height: 100%;
+   margin-bottom: 5px;
    color: #536471;
    font-size: 22px;
    letter-spacing: .3px;
@@ -379,10 +379,29 @@
    box-sizing: border-box;
    flex-basis: auto;
 }
+/* 
+      251 genişlik
+      290 yükseklik
+ */
 
-
-
-
+.imagesContainer {
+   border-radius: 16px;
+   width: 100%;
+   display: flex;
+   gap: 1rem;
+   flex-wrap: wrap;
+   height: 100%;
+}
+.each_image_div{
+   position: relative;
+   height: 100%;
+   width: 100%;
+}
+.mediaBody{
+   display: flex;
+   position: relative;
+   width: 100%;
+}
 .uploadedMediaContainer {
    margin-top: 16px;
    position: relative;
@@ -391,14 +410,16 @@
 
 .uploadedMedia {
    border-radius: 16px;
-   height: 100%;
    width: 100%;
+   /* height: 300px; */
    display: block;
    overflow-x: hidden;
    overflow-y: hidden;
    cursor: pointer;
 }
-
+.ewOjua{
+   border-radius: 16px !important;
+}
 .media_edit {
    position: absolute;
    left: 4px;
@@ -454,6 +475,7 @@
    display: flex;
    font-size: 15px;
    gap: 3rem;
+   height: 20px;
 }
 
 .mediaFooter>div {
@@ -468,6 +490,7 @@
 }
 
 .mediaFooter>div>a {
+   font-size: 13px;
    text-decoration: none;
    color: rgb(83, 100, 113);
 }
@@ -475,3 +498,105 @@
 .mediaFooter>div>a:hover {
    text-decoration: underline;
 }
+
+
+.uploadedGifContainer{
+   width: 100%;
+   display: flex;
+   justify-content: flex-start;
+   position: relative;
+   width: 504px;
+}
+.uploadedGifContainer>div{
+   width: 100% !important;
+}
+.uploadedGifContainer>span{
+   position: absolute;
+   background-color: rgba(15,20,25,0.75);
+   display: flex;
+   justify-content: center;
+   border-radius: 9999px;
+   padding: 6px;
+   cursor: pointer;
+   transition: background-color .15s ease-in-out;
+   right: 10px;
+   top: 10px;
+}
+.uploadedGifContainer>span:hover{
+   background-color: rgba(39, 44, 48, 0.75);
+}
+
+
+.uploadedGifContainer>span>svg{
+   pointer-events: auto;
+   cursor: pointer;
+   font-size: 15px;
+   font-weight: 700;
+   width: 18px;
+   height: 18px;
+   user-select: none;
+   fill: currentColor;
+   color: rgb(255, 255, 255);
+}
+
+
+
+.addAnotherPost{
+   height: 100%;
+   flex: 1;
+   display: flex;
+   justify-content: flex-end;
+   align-items: center;
+   gap: 1rem;
+   padding-inline-end: 1rem;
+}
+.boundary{
+   width: 22px;
+   height: 22px;
+   background: conic-gradient(rgb(29,155,240) 3.6deg, rgb(239, 243, 244) 0deg);
+   position: relative;
+   display: flex;
+   align-items: center;
+   justify-content: center;
+   border-radius: 50%;
+}
+.boundary_inner{
+   width: 18px;
+   height: 18px;
+   position: absolute;
+   background-color: rgba(255,255,255,1);
+   border-radius: 50%;
+}
+.tweet_seperator{
+   width: 1px;
+   height: 90%;
+   background-color: rgb(185, 202, 211);
+}
+.plus_sign{
+   width: 22px;
+   height: 22px;
+   display: flex;
+   justify-content: center;
+   align-items: center;
+   border-radius: 50%;
+   border: 1px solid rgb(207,217,222);
+   cursor: pointer;
+   transition:  all .1s ease-in-out;
+}
+.plus_sign:hover{
+   background-color: rgba(29, 155, 240, 0.10);
+}
+.plus_sign > svg{
+   cursor: pointer;
+   height: 16px;
+   width: 16px;
+   user-select: none;
+   fill: currentcolor;
+   color: rgb(29, 155, 240);
+}
+
+.ddfkgm{
+   color: rgb(255, 212, 0);
+}
+
+

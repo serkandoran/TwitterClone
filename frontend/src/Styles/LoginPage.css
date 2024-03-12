@@ -23,7 +23,7 @@ body::-webkit-scrollbar{
    inset: 0;
    margin: auto;
 
-   z-index: 5;
+   z-index: 15;
 }
 /*  */
 

@@ -1,13 +1,18 @@
-const Explore = () => {
+
+import '../../Styles/UserRoutesCss/Explore.css'
 
 
+const Explore = ()=>{
 
-   console.log('explore calisti');
+
 
    return <div>
-      <h1>Explore Page</h1>
+      <h2>Explore Page</h2>
    </div>
-
 }
 
+
 export default Explore
+
+
+

@@ -3,8 +3,12 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useFetcher, useNavigate } from 'react-router-dom'
 import Rightbar from './RightBar'
 import EmojiPicker from 'emoji-picker-react'
+import UploadImage from './HomePageSubFolders/UploadImage'
+import GifComponent from './HomePageSubFolders/GifComponent'
+import QuestionComponent from './HomePageSubFolders/QuestionComponent'
+import BackDrop from '../BackDrop'
+import { Gif } from '@giphy/react-components'
 
-import UploadImageComponent from './HomePageSubFolders/UploadImageComponent'
 
 
 const HomePage = () => {
@@ -13,7 +17,7 @@ const HomePage = () => {
    const [inputclick, setInputclick] = useState(false)
    const textareaDivRef = useRef()
    const [inputValue, setInputValue] = useState('')
-   const validTextLength = 5
+   const validTextLength = 10
    const [emojiFlag, setEmojiFlag] = useState(false)
    const emojiRef = useRef()
    const openEmojiRef = useRef()
@@ -23,8 +27,14 @@ const HomePage = () => {
    let stopReleasing = false
    let outOfContent = false
    const [selectedImage, setSelectedImage] = useState(null)
+   const [imagesAr, setImagesAr] = useState([])
    const [mediaType, setMediaType] = useState(null)
 
+   const [gifFlag,setGifFlag] = useState(false)
+   const [gifData,setGifData] = useState(null)
+   
+   const [questionFlag, setQuestionFlag] = useState(false)
+   const [fillBoundary, setFillBoundary] = useState(0)
 
    useEffect(() => {
       const handleMouseDown = (e) => {
@@ -40,8 +50,20 @@ const HomePage = () => {
       }
    }, [])
 
+   useEffect(()=>{
+      if(!imagesAr.length){
+         setMediaType(null)
+         setSelectedImage(null)
+      }
+   },[imagesAr])
+
    useEffect(() => {
       const handleMouseUp = (e) => {
+         if (document.getElementById('backdrop_container')){
+            if (e.target === document.getElementById('backdrop_container')){
+               setGifFlag(false)
+            }
+         }
          if (outOfContent) return
          let { selectedText } = selectionFunction(textareaDivRef.current)
          if (selectedText.length) {
@@ -70,6 +92,13 @@ const HomePage = () => {
       };
    }, [emojiFlag, caretstate]);
 
+   useEffect(()=>{
+      if(gifFlag){
+         document.body.style.overflow = 'hidden'
+      }else{
+         document.body.style.overflow = ''
+      }
+   },[gifFlag])
 
    const isLogged = async () => {
       let response = await fetch('http://localhost:4000/api/v1/islogged', {
@@ -85,10 +114,25 @@ const HomePage = () => {
       marginTop: !inputclick && '16px'
    }
    const postDivStyle = {
-      opacity: inputValue === '' && '.5',
+      opacity: inputValue.length <= validTextLength && inputValue.length > 0 ? '':'.5',
+      pointerEvents: inputValue.length <= validTextLength && inputValue ? '':'none',
    }
    const postDivButtonStyle = {
       cursor: inputValue === '' ? 'default' : 'pointer'
+   }
+   const fadeIcons = {
+      opacity: gifData || questionFlag ? '0.4' : '',
+      pointerEvents: gifData || questionFlag ? 'none' : '',
+   }
+   const hasMultipleImage = {
+      width: imagesAr.length > 1 && 'calc(50% - 16px)'
+   }
+   const imgStyle = {
+      height: imagesAr.length > 1 && '300px'
+   }
+   const boundaryStyle = {
+      background: `conic-gradient(${fillBoundary < validTextLength && ((360 * fillBoundary / validTextLength) * 100 / 360) < 80 ? 'rgb(29, 155, 240)' : ((360 * fillBoundary / validTextLength) * 100 / 360) >= 80 && fillBoundary < validTextLength ? 'rgb(255, 212, 0)': 'rgb(253,0,0)'}${360 * fillBoundary / validTextLength}deg, rgb(239, 243, 244) 0deg)`,
+      scale: ((360 * fillBoundary / validTextLength)*100/360) >= 80 && '1.3'
    }
    function waitForEmoji() {
       return new Promise((res, rej) => {
@@ -126,6 +170,7 @@ const HomePage = () => {
          if (stopReleasing) return
          if (emojiFlag) return
 
+         if(questionFlag) return
          textareaDivRef.current.focus()
          findAndMoveCaret(textareaDivRef.current, caretstate)
       }
@@ -315,6 +360,9 @@ const HomePage = () => {
       findAndMoveCaret(e.target, shouldToBe)
    }
    const onInputChange = (e, fromEmoji = false) => {
+
+      setFillBoundary(Array.from(textareaDivRef.current.textContent).length) // tweet boxtaki, boundary için
+
       let etarget
 
       if (fromEmoji) etarget = e
@@ -417,6 +465,7 @@ const HomePage = () => {
          setMousePressing(false)
       }
    }
+
    const mediaUploadFunction = (selectedFile) => {
       // image/jpeg
       // video/mp4
@@ -427,13 +476,32 @@ const HomePage = () => {
       const reader = new FileReader()
       reader.onload = () => {
          setSelectedImage(reader.result)
+
+         setImagesAr(prev => [...prev,reader.result])
       }
       reader.readAsDataURL(selectedFile)
    }
-   const closeMedia = () => {
-      setMediaType(null)
-      setSelectedImage(null)
+   const closeMedia = (key,idx) => {
+      setImagesAr(prev => prev.filter((el,val) => val !== idx))
    }
+   const gifHandler = ()=>{
+      setGifFlag(true)
+   }
+   const gifDataProp = (val) =>{
+      setGifFlag(false)
+      setGifData(val)
+   }
+   const closeGifContainer = ()=>{
+      setGifFlag(false)
+   }
+   const questionHandler = (e)=>{
+      setQuestionFlag(true)
+   }
+   const closeQuestionContainer = ()=>{
+      setQuestionFlag(false)
+   }
+
+
 
    return <div className='homepage_container_main'>
       <div className="homepage_container_content">
@@ -489,16 +557,36 @@ const HomePage = () => {
 
                      {selectedImage && <div className='uploadedMediaContainer'>
                         <div className="mediaBody">
-                           <div style={{ zIndex: '2' }} className='media_edit'>
-                              <span>Edit</span>
-                           </div>
-                           <div style={{ zIndex: '2' }} onClick={closeMedia} className='media_close'>
-                              <svg viewBox="0 0 24 24" className='media_close_svg'>
-                                 <g><path d="M10.59 12L4.54 5.96l1.42-1.42L12 10.59l6.04-6.05 1.42 1.42L13.41 12l6.05 6.04-1.42 1.42L12 13.41l-6.04 6.05-1.42-1.42L10.59 12z"></path></g>
-                              </svg>
-                           </div>
                            {
-                              mediaType === 'video' ? <video style={{ zIndex: '0' }} controls src={selectedImage} className='uploadedMedia'></video> : <img src={selectedImage} alt="Selected" className='uploadedMedia' />
+                              mediaType === 'video' ? <div className='video_container'>
+                                 <div style={{ zIndex: '2' }} className='media_edit'> 
+                                    <span>Edit</span>
+                                 </div>
+                                 <div style={{ zIndex: '2' }} onClick={()=>closeMedia('',0)} className='media_close'>
+                                    <svg viewBox="0 0 24 24" className='media_close_svg'>
+                                       <g><path d="M10.59 12L4.54 5.96l1.42-1.42L12 10.59l6.04-6.05 1.42 1.42L13.41 12l6.05 6.04-1.42 1.42L12 13.41l-6.04 6.05-1.42-1.42L10.59 12z"></path></g>
+                                    </svg>
+                                 </div>
+                                 <video style={{ zIndex: '0' }} controls src={selectedImage} className='uploadedMedia'></video>
+                              </div>:
+                                 <div className='imagesContainer'>
+                                    {
+                                       imagesAr.map((idx,key)=>{
+                                          return <div style={hasMultipleImage} className='each_image_div' key={key}>
+                                             <div style={{ zIndex: '2' }} className='media_edit'>
+                                                <span>Edit</span>
+                                             </div>
+                                             <div style={{ zIndex: '2' }} onClick={()=>closeMedia(idx,key)} className='media_close'>
+                                                <svg viewBox="0 0 24 24" className='media_close_svg'>
+                                                   <g><path d="M10.59 12L4.54 5.96l1.42-1.42L12 10.59l6.04-6.05 1.42 1.42L13.41 12l6.05 6.04-1.42 1.42L12 13.41l-6.04 6.05-1.42-1.42L10.59 12z"></path></g>
+                                                </svg>
+                                             </div>
+
+                                             <img src={idx} alt="Selected" style={imgStyle} className='uploadedMedia' key={key} />
+                                          </div>
+                                       })
+                                    }
+                              </div>
                            }
                         </div>
                         <div className="mediaFooter">
@@ -513,6 +601,18 @@ const HomePage = () => {
                         </div>
                      </div>}
 
+                     {
+                        gifData && <div className="uploadedGifContainer">
+                           <Gif noLink gif={gifData} width={300} />
+                           <span>
+                              <svg onClick={()=>{setGifData(null)}} viewBox="0 0 24 24"><g><path d="M10.59 12L4.54 5.96l1.42-1.42L12 10.59l6.04-6.05 1.42 1.42L13.41 12l6.05 6.04-1.42 1.42L12 13.41l-6.04 6.05-1.42-1.42L10.59 12z"></path></g></svg>
+                           </span>
+                        </div>
+                     }
+
+                     {
+                        questionFlag && <QuestionComponent closeQuestionContainer={closeQuestionContainer} />
+                     }
 
 
 
@@ -527,15 +627,14 @@ const HomePage = () => {
                               </div>
                            </div>}
 
-
                            <nav className="hp_cnt_right_bottom_left" style={iconsInlineStyle}>
                               <div className='svg_holder'>
-                                 <UploadImageComponent mediaUploadFunction={mediaUploadFunction} />
-                                 <div className="hp_cnt_right_bottom_left_icons">
+                                 <UploadImage gifAddedProp={gifData || questionFlag ? fadeIcons : {}} mediaUploadFunction={mediaUploadFunction} />
+                                 <div style={fadeIcons} onClick={gifHandler} className="hp_cnt_right_bottom_left_icons">
                                     <svg viewBox="0 0 24 24"><g><path d="M3 5.5C3 4.119 4.12 3 5.5 3h13C19.88 3 21 4.119 21 5.5v13c0 1.381-1.12 2.5-2.5 2.5h-13C4.12 21 3 19.881 3 18.5v-13zM5.5 5c-.28 0-.5.224-.5.5v13c0 .276.22.5.5.5h13c.28 0 .5-.224.5-.5v-13c0-.276-.22-.5-.5-.5h-13zM18 10.711V9.25h-3.74v5.5h1.44v-1.719h1.7V11.57h-1.7v-.859H18zM11.79 9.25h1.44v5.5h-1.44v-5.5zm-3.07 1.375c.34 0 .77.172 1.02.43l1.03-.86c-.51-.601-1.28-.945-2.05-.945C7.19 9.25 6 10.453 6 12s1.19 2.75 2.72 2.75c.85 0 1.54-.344 2.05-.945v-2.149H8.38v1.032H9.4v.515c-.17.086-.42.172-.68.172-.76 0-1.36-.602-1.36-1.375 0-.688.6-1.375 1.36-1.375z"></path></g></svg>
                                  </div>
-                                 <div className="hp_cnt_right_bottom_left_icons">
-                                    <svg viewBox="0 0 24 24"><g><path d="M6 5c-1.1 0-2 .895-2 2s.9 2 2 2 2-.895 2-2-.9-2-2-2zM2 7c0-2.209 1.79-4 4-4s4 1.791 4 4-1.79 4-4 4-4-1.791-4-4zm20 1H12V6h10v2zM6 15c-1.1 0-2 .895-2 2s.9 2 2 2 2-.895 2-2-.9-2-2-2zm-4 2c0-2.209 1.79-4 4-4s4 1.791 4 4-1.79 4-4 4-4-1.791-4-4zm20 1H12v-2h10v2zM7 7c0 .552-.45 1-1 1s-1-.448-1-1 .45-1 1-1 1 .448 1 1z"></path></g></svg>
+                                 <div style={fadeIcons} className="hp_cnt_right_bottom_left_icons">
+                                    <svg onClick={questionHandler} viewBox="0 0 24 24"><g><path d="M6 5c-1.1 0-2 .895-2 2s.9 2 2 2 2-.895 2-2-.9-2-2-2zM2 7c0-2.209 1.79-4 4-4s4 1.791 4 4-1.79 4-4 4-4-1.791-4-4zm20 1H12V6h10v2zM6 15c-1.1 0-2 .895-2 2s.9 2 2 2 2-.895 2-2-.9-2-2-2zm-4 2c0-2.209 1.79-4 4-4s4 1.791 4 4-1.79 4-4 4-4-1.791-4-4zm20 1H12v-2h10v2zM7 7c0 .552-.45 1-1 1s-1-.448-1-1 .45-1 1-1 1 .448 1 1z"></path></g></svg>
                                  </div>
                                  <div ref={openEmojiRef} onClick={openEmoji} className="hp_cnt_right_bottom_left_icons">
                                     <svg viewBox="0 0 24 24"><g><path d="M8 9.5C8 8.119 8.672 7 9.5 7S11 8.119 11 9.5 10.328 12 9.5 12 8 10.881 8 9.5zm6.5 2.5c.828 0 1.5-1.119 1.5-2.5S15.328 7 14.5 7 13 8.119 13 9.5s.672 2.5 1.5 2.5zM12 16c-2.224 0-3.021-2.227-3.051-2.316l-1.897.633c.05.15 1.271 3.684 4.949 3.684s4.898-3.533 4.949-3.684l-1.896-.638c-.033.095-.83 2.322-3.053 2.322zm10.25-4.001c0 5.652-4.598 10.25-10.25 10.25S1.75 17.652 1.75 12 6.348 1.75 12 1.75 22.25 6.348 22.25 12zm-2 0c0-4.549-3.701-8.25-8.25-8.25S3.75 7.451 3.75 12s3.701 8.25 8.25 8.25 8.25-3.701 8.25-8.25z"></path></g></svg>
@@ -547,6 +646,19 @@ const HomePage = () => {
                                     <svg viewBox="0 0 24 24" aria-hidden="true" style={{ opacity: '.5', cursor: 'default' }}><g><path d="M12 7c-1.93 0-3.5 1.57-3.5 3.5S10.07 14 12 14s3.5-1.57 3.5-3.5S13.93 7 12 7zm0 5c-.827 0-1.5-.673-1.5-1.5S11.173 9 12 9s1.5.673 1.5 1.5S12.827 12 12 12zm0-10c-4.687 0-8.5 3.813-8.5 8.5 0 5.967 7.621 11.116 7.945 11.332l.555.37.555-.37c.324-.216 7.945-5.365 7.945-11.332C20.5 5.813 16.687 2 12 2zm0 17.77c-1.665-1.241-6.5-5.196-6.5-9.27C5.5 6.916 8.416 4 12 4s6.5 2.916 6.5 6.5c0 4.073-4.835 8.028-6.5 9.27z"></path></g></svg>
                                  </div>
                               </div>
+
+
+                              <div style={fillBoundary > 0 ? {display:'flex'}:{display:'none'} } className="addAnotherPost">
+                                 <div style={boundaryStyle} className="boundary">
+                                    <div className="boundary_inner"></div>
+                                 </div>
+                                 <div className="tweet_seperator"></div>
+                                 <div className="plus_sign">
+                                    <svg viewBox="0 0 24 24" aria-hidden="true"><g><path d="M11 11V4h2v7h7v2h-7v7h-2v-7H4v-2h7z"></path></g></svg>
+                                 </div>
+                              </div>
+
+
                               <div style={postDivStyle} className="hp_cnt_nav_button">
                                  <button style={postDivButtonStyle}>Post</button>
                               </div>
@@ -555,15 +667,11 @@ const HomePage = () => {
                               emojiFlag && <div ref={emojiRef} style={{ width: '352px' }}><EmojiPicker skinTonesDisabled onEmojiClick={emojiHandle} /></div>
                            }
 
-
                         </div>
                      </div>
                   </div>
 
                </div>
-
-               {/* 
-               <div className="homepage_content_body_flow"></div> */}
 
 
             </div>
@@ -571,6 +679,21 @@ const HomePage = () => {
             <Rightbar />
          </div>
       </div>
+
+
+
+      { gifFlag && <>
+         <GifComponent gifDataProp={gifDataProp} closeGifContainer={closeGifContainer} />
+         <BackDrop />
+      </>
+      }
+
+      {/* 
+
+               Gif acıkken sayfa yenilenirse hala açık kalıyor.
+       */}
+
+      
    </div>
 }
 

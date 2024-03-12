@@ -1,6 +1,5 @@
 
 import '../Styles/ErrorPage.css'
-import BackDrop from './BackDrop'
 
 const ErrorPage = (props)=>{
 

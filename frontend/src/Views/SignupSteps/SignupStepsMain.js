@@ -46,7 +46,6 @@ const SignupStepsMain = ()=>{
       if(postUserData){
          registerUser()
       }
-
    },[navigateFlag, postUserData])
 
    const isLogged = async () => {
