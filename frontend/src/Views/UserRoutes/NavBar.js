@@ -417,7 +417,7 @@ const NavBar = ()=>{
                   </div>
                </div>,
                document.getElementById('layers'))}
-      
+
 
       </header>
 }

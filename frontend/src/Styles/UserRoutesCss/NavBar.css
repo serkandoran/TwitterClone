@@ -581,9 +581,7 @@
    z-index: 3;
    position: fixed;
    top: 379.5px;
-   /* right: 1257px; */
-   /* ayar */
-   right: 500px;
+   left: 18%;
    box-shadow: 0 0 15px rgba(101, 119, 134,0.2),
                0 0 3px 1px rgba(101,119,134,0.15);
    overflow-y: auto;

@@ -1,16 +1,19 @@
 import '../Styles/BackDrop.css'
-
+import { useEffect } from 'react'
 
 
 const BackDrop = ()=>{
+   useEffect(()=>{
 
-
-   return <div id="backdrop_container">
+      let html = document.querySelector('html')
+      html.style.overflow = 'hidden'
       
+      return ()=>{
+         html.style.overflow = 'auto'
+      }
+   },[])
 
-   </div>
+   return <div id="backdrop_container"></div>
 }
 
 export default BackDrop
-
-

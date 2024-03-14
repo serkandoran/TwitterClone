@@ -3,7 +3,6 @@
 
 .rightbar_container{
    display: flex;
-   margin-right: 70px;
    width: 350px;
    align-items: stretch;
    background-color: rgba(0,0,0,0);
