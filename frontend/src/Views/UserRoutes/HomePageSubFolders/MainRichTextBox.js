@@ -8,9 +8,11 @@ import BackDrop from '../../BackDrop'
 import { Gif } from '@giphy/react-components'
 import Draft from './Draft'
 import { createPortal } from 'react-dom'
+import { useDispatch } from 'react-redux'
 
 
 const MainRichTextBox = () => {
+   const dispatch = useDispatch()
    const [inputclick, setInputclick] = useState(false)
    const textareaDivRef = useRef()
    const [inputValue, setInputValue] = useState('')
@@ -111,8 +113,8 @@ const MainRichTextBox = () => {
       cursor: inputValue === '' ? 'default' : 'pointer'
    }
    const fadeIcons = {
-      opacity: gifData || questionFlag ? '0.4' : '',
-      pointerEvents: gifData || questionFlag ? 'none' : '',
+      opacity: gifData || questionFlag || imagesAr.length >= 4 ? '0.4' : '',
+      pointerEvents: gifData || questionFlag || imagesAr.length >= 4 ? 'none' : '',
    }
    const hasMultipleImage = {
       width: imagesAr.length > 1 && 'calc(50% - 16px)'
@@ -240,7 +242,7 @@ const MainRichTextBox = () => {
       if (e.key === 'Backspace' || e.key === 'Delete') return // baackSpace ve Delete, basılı tutulup silinmeye karşın, keyDownda güncelliyor. Ekstra olmasın diye
       if (!e.target.textContent.length) return // input alanı boşken shift,ctrl vs gibi şeylere basılması
 
-      calculateCaret(e.target)
+      calculateCaret(e.target,true)
    }
    const keyDownControl = (e) => {
       if (e.key === 'Enter') {
@@ -273,10 +275,11 @@ const MainRichTextBox = () => {
       }
       return { whichWay, selectedText }
    }
-   const calculateCaret = (etarget) => {
-
+   const calculateCaret = (etarget,param=false) => {
       setInputWorked(false)
-      if (inputWorked) return
+
+      if (!param && inputWorked) return
+
       let el = window.getSelection().extentNode.parentElement
       let elidx = [...etarget.children].indexOf(el)
       let pos = window.getSelection().extentOffset
@@ -335,17 +338,13 @@ const MainRichTextBox = () => {
       positionCaret(el, shouldToBe)
    }
    const updateCaret = (e, param = -2) => { // ekleme silme olduğu durum
-
       if (!e.target) return
-
       if (mousePressing) return // eğer mouse basılı ise careti hareket ettirme
-
       setInputWorked(true) // onInput calistiginda, keyUp calismaması için
 
       let newTypedLength = param < 0 && Array.from(e.nativeEvent.data).length
       let shouldToBe = param < 0 ? newTypedLength + caretstate : param
       setcaretstate(shouldToBe)
-
 
       findAndMoveCaret(e.target, shouldToBe)
    }
@@ -456,6 +455,7 @@ const MainRichTextBox = () => {
       }
    }
 
+
    const mediaUploadFunction = (selectedFile) => {
       // image/jpeg
       // video/mp4
@@ -490,10 +490,20 @@ const MainRichTextBox = () => {
    const closeQuestionContainer = () => {
       setQuestionFlag(false)
    }
-
-
    const draftHandler = (e) => {
+      dispatch({
+         type: 'INPUT_FIELD',
+         payload: [...[textareaDivRef.current.textContent],...['']]
+      })
       setDraftFlag(true)
+   }
+   const closeDraftHandler = () => {
+      setDraftFlag(false)
+      textareaDivRef.current.textContent = ''
+      let span = document.createElement('span')
+      textareaDivRef.current.appendChild(span)
+      setFillBoundary(0)
+      setcaretstate(0)
    }
 
 
@@ -600,7 +610,7 @@ const MainRichTextBox = () => {
 
                            <nav className="hp_cnt_right_bottom_left" style={iconsInlineStyle}>
                               <div className='svg_holder'>
-                                 <UploadImage gifAddedProp={gifData || questionFlag ? fadeIcons : {}} mediaUploadFunction={mediaUploadFunction} />
+                                 <UploadImage gifAddedProp={gifData || questionFlag || imagesAr.length >= 4 ? fadeIcons : {}} mediaUploadFunction={mediaUploadFunction} />
                                  <div style={fadeIcons} onClick={gifHandler} className="hp_cnt_right_bottom_left_icons">
                                     <svg viewBox="0 0 24 24"><g><path d="M3 5.5C3 4.119 4.12 3 5.5 3h13C19.88 3 21 4.119 21 5.5v13c0 1.381-1.12 2.5-2.5 2.5h-13C4.12 21 3 19.881 3 18.5v-13zM5.5 5c-.28 0-.5.224-.5.5v13c0 .276.22.5.5.5h13c.28 0 .5-.224.5-.5v-13c0-.276-.22-.5-.5-.5h-13zM18 10.711V9.25h-3.74v5.5h1.44v-1.719h1.7V11.57h-1.7v-.859H18zM11.79 9.25h1.44v5.5h-1.44v-5.5zm-3.07 1.375c.34 0 .77.172 1.02.43l1.03-.86c-.51-.601-1.28-.945-2.05-.945C7.19 9.25 6 10.453 6 12s1.19 2.75 2.72 2.75c.85 0 1.54-.344 2.05-.945v-2.149H8.38v1.032H9.4v.515c-.17.086-.42.172-.68.172-.76 0-1.36-.602-1.36-1.375 0-.688.6-1.375 1.36-1.375z"></path></g></svg>
                                  </div>
@@ -659,7 +669,10 @@ const MainRichTextBox = () => {
       {
          draftFlag && createPortal(
             <>
-               <Draft />
+               <Draft 
+                  closeDraftHandler={closeDraftHandler} 
+                  validTextLength = {validTextLength}
+               />
                <BackDrop />
             </>,
             document.getElementById('layers')

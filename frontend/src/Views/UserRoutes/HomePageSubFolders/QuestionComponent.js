@@ -38,9 +38,6 @@ const QuestionComponent = (props)=>{
                el.childNodes[0].classList.remove('focusedQuestion_end')
                if (!el.childNodes[0].classList.contains('qwe')){
                   el.childNodes[0].classList.add('focusedQuestion')
-                  console.log('evet içeriyor');
-               }else{
-                  console.log('burası');
                }
                el.classList.add('el_outline')
                el.childNodes[1].style.display = 'inline'
@@ -51,18 +48,15 @@ const QuestionComponent = (props)=>{
                if(inp.value.length > 0 ){
                   el.classList.remove('el_outline')
                   el.childNodes[0].style.color = 'rgb(83, 100, 113)'
-                  console.log('else kısmı if kısmı');
                }else{
                   if (el.childNodes[0].classList.contains('qwe')){
                      el.childNodes[0].classList.remove('qwe')
                      el.childNodes[0].classList.add('focusedQuestion_end')
-                     console.log('else kısmı else kısmı if kısmı');
                   }
                   el.childNodes[0].style.color = 'rgb(83, 100, 113)'
                   el.childNodes[1].style.display = 'none'
                   el.classList.remove('el_outline')
                   if (el.childNodes[0].classList.contains('focusedQuestion')){
-                     console.log('else kısmı else kısmı if kısmı if kısmı');
                      el.childNodes[0].classList.remove('focusedQuestion')
                      el.childNodes[0].classList.add('focusedQuestion_end')
                   }

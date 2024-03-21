@@ -1,16 +1,20 @@
 import '../../../Styles/UserRoutesCss/HomePage.css'
+import '../../../Styles/HomePageSubFolders/RichTextBox.css'
 import { useEffect, useRef, useState } from 'react'
 import EmojiPicker from 'emoji-picker-react'
 import UploadImage from './UploadImage'
 import GifComponent from './GifComponent'
 import QuestionComponent from './QuestionComponent'
-import BackDrop from '../../BackDrop'
 import { Gif } from '@giphy/react-components'
-import Draft from './Draft'
 import { createPortal } from 'react-dom'
+import { useDispatch, useSelector } from 'react-redux'
 
 
-const RichTextBox = () => {
+const RichTextBox = (props) => {
+   let rtb = useSelector(state => state.ui.inputField)
+   let dispatch = useDispatch()
+
+
    const [inputclick, setInputclick] = useState(false)
    const textareaDivRef = useRef()
    const [inputValue, setInputValue] = useState('')
@@ -33,7 +37,10 @@ const RichTextBox = () => {
    const [questionFlag, setQuestionFlag] = useState(false)
    const [fillBoundary, setFillBoundary] = useState(0)
 
-   const [draftFlag, setDraftFlag] = useState(false)
+   const [emjx, setemjx] = useState()
+   const [emjy, setemjy] = useState()
+
+   const addNewDraftRef = useRef()
 
    useEffect(() => {
       const handleMouseDown = (e) => {
@@ -99,20 +106,58 @@ const RichTextBox = () => {
       }
    },[gifFlag])
 
+   useEffect(()=>{
+      if(props.showEl){
+         textareaDivRef.current.focus()
+      }
+   },[])
+
+
+   useEffect(() => {
+      onInputChange(document.querySelector('.hp_cnt_right_top'), false, true)
+   }, [])
    
+   useEffect(() => {
+      if (!props.showEl) {
+         textareaDivRef.current.textContent = props.elContent
+         onInputChange(document.querySelector('.hp_cnt_right_top'), false, true)
+      }else{
+         if (props.inpFlag){
+            onInputChange(document.querySelector('.hp_cnt_right_top'), false, true)
+            setInputValue(0)
+            setcaretstate(0)
+            setFillBoundary(0)
+            props.clearInput()
+         }
+         textareaDivRef.current.focus()
+      }
+   })
+
+   useEffect(()=>{
+
+      let newRtb = [...rtb]
+      newRtb[props.elidx] = textareaDivRef.current.textContent
+      dispatch({
+         type: 'INPUT_FIELD',
+         payload: newRtb
+      })
+
+   },[inputValue])
+
    const iconsInlineStyle = {
       marginTop: !inputclick && '16px'
    }
    const postDivStyle = {
-      opacity: inputValue.length <= validTextLength && inputValue.length > 0 ? '':'.5',
-      pointerEvents: inputValue.length <= validTextLength && inputValue ? '':'none',
+      userSelect: 'none',
+      opacity: props.canPost ? '1' : '.5',
+      pointerEvents: props.canPost ? '' : 'none'
    }
    const postDivButtonStyle = {
       cursor: inputValue === '' ? 'default' : 'pointer'
    }
    const fadeIcons = {
-      opacity: gifData || questionFlag ? '0.4' : '',
-      pointerEvents: gifData || questionFlag ? 'none' : '',
+      opacity: gifData || questionFlag || imagesAr.length >= 4 ? '0.4' : '',
+      pointerEvents: gifData || questionFlag || imagesAr.length >= 4 ? 'none' : '',
    }
    const hasMultipleImage = {
       width: imagesAr.length > 1 && 'calc(50% - 16px)'
@@ -124,18 +169,31 @@ const RichTextBox = () => {
       background: `conic-gradient(${fillBoundary < validTextLength && ((360 * fillBoundary / validTextLength) * 100 / 360) < 80 ? 'rgb(29, 155, 240)' : ((360 * fillBoundary / validTextLength) * 100 / 360) >= 80 && fillBoundary < validTextLength ? 'rgb(255, 212, 0)': 'rgb(253,0,0)'}${360 * fillBoundary / validTextLength}deg, rgb(239, 243, 244) 0deg)`,
       scale: ((360 * fillBoundary / validTextLength)*100/360) >= 80 && '1.3'
    }
+   const opacityStyle = {
+      opacity: props.showEl ? '1' : '0.5'
+   }
+   const emojiPos = {
+      zIndex:'14',
+      width:'352px',
+      left: `${emjx-150}px`,
+      top: `${emjy+30}px`
+   }
+
    function waitForEmoji() {
       return new Promise((res, rej) => {
          if (!emojiFlag) {
             setTimeout(() => {
                setEmojiFlag(true)
                res()
-            }, 0);
+            }, 200);
          }
       })
    }
    const openEmoji = async () => {
       await waitForEmoji()
+      let rect = openEmojiRef.current.getBoundingClientRect();
+      setemjx(parseInt(rect.left))
+      setemjy(parseInt(rect.top))
    }
    const emojiHandle = (e) => { // henüz boş
       let curText = textareaDivRef.current.textContent
@@ -155,6 +213,7 @@ const RichTextBox = () => {
       document.execCommand("insertText", false, x)
    }
    const inputControl = (e) => {
+
       setInputclick(true) // Everyone can reply yazısı için
       if (!e.target.contains(openEmojiRef.current)) {
          if (stopReleasing) return
@@ -163,6 +222,9 @@ const RichTextBox = () => {
          if(questionFlag) return
          textareaDivRef.current.focus()
          findAndMoveCaret(textareaDivRef.current, caretstate)
+
+         if(addNewDraftRef.current.contains(e.target)) return
+         props.whichEl()
       }
    }
    const textArrays = (e, text) => {
@@ -349,27 +411,30 @@ const RichTextBox = () => {
 
       findAndMoveCaret(e.target, shouldToBe)
    }
-   const onInputChange = (e, fromEmoji = false) => {
+   const onInputChange = (e, fromEmoji = false, fromDraft = false) => {
 
-      setFillBoundary(Array.from(textareaDivRef.current.textContent).length) // tweet boxtaki, boundary için
+      let etarget = textareaDivRef.current
 
-      let etarget
+      setFillBoundary(Array.from(etarget.textContent).length) // tweet boxtaki, boundary için
+
 
       if (fromEmoji) etarget = e
-      else etarget = e.target
-
+      else if (!fromDraft) etarget = e.target
 
       setInputValue(etarget.textContent)
       let typedInput = etarget.textContent
 
+      if(fromDraft) typedInput = props.elContent
+
       let forDelete
-      if (!fromEmoji) {
+      if (!fromEmoji && !fromDraft) {
          forDelete = -2
          if (!e.nativeEvent.data) {
             forDelete = calculateCaret(etarget)
             if (!forDelete) forDelete = 0
          }
       }
+
 
       let incSpan = false
       for (let i = 0; i < etarget.childNodes.length; i++) {
@@ -436,9 +501,12 @@ const RichTextBox = () => {
       cleanStyles(etarget, validAr) // valid kısım için, stilleri temizle
       addStyles(etarget, validAr) // valid olmayan kısım için stil ekle
 
+      
+
       if (!fromEmoji) updateCaret(e, forDelete)
    }
    const omd = (e) => {
+   
       setMousePressing(true)
       setTimeout(() => {
          let pos = calculateCaret(textareaDivRef.current)
@@ -490,185 +558,184 @@ const RichTextBox = () => {
    const closeQuestionContainer = ()=>{
       setQuestionFlag(false)
    }
-
-
-   const draftHandler = (e)=>{
-      setDraftFlag(true)
+   const addDraftHandler = ()=>{
+      props.addedNewField(0,textareaDivRef.current.textContent)
    }
 
-
    return <>
-      <div className="homepage_container_content">
-         <div>
-            <div className="homepage_content_body">
+      <div className="homepage_content_body general_wrapper_container">
 
-               <div className="homepage_content_body_wih" onClick={(e) => inputControl(e)}>
-                  <div className="homepage_content_body_wih_left">
-                     <div style={{ backgroundImage: 'url(https://lh3.googleusercontent.com/a/ACg8ocK_yeA5iF6fFL-TeEVWsvNlDEQBPeT1QECzUHDqibrQ=s96-c)' }}></div>
+         <div className="homepage_content_body_wih general_container" onClick={(e) => inputControl(e)}>
+         <span style={props.showEl ? {} : {display:'none'}} className='left_line'></span>
+
+
+            <div style={opacityStyle} className="header_container_wrapper">
+
+               <div style={props.showEl ? {minHeight:'98px'}:{minHeight:'0px'}} className="header_container">
+
+                  <div className='profile_photo' style={{backgroundImage: 'url(https://lh3.googleusercontent.com/a/ACg8ocK_yeA5iF6fFL-TeEVWsvNlDEQBPeT1QECzUHDqibrQ=s96-c)' }}>
                   </div>
-
-                  <div className="homepage_content_body_wih_right" >
-                     <div
-                        ref={textareaDivRef}
-                        contentEditable
-                        onPaste={onPasteHandler}
-                        className={['hp_cnt_right_top', !inputValue.length ? 'right_top_before' : ''].join(' ')}
-                        suppressContentEditableWarning
-                        onInput={onInputChange}
-                        onKeyDown={keyDownControl}
-                        onKeyUp={keyUpControl}
-                        spellCheck="false"
-                        // mouse kısmı için
-                        onMouseDown={omd}
-                        onMouseUp={omu}
-                        onSelect={ons}
-                     >
-                        <span></span>
-                     </div>
-
-                     {selectedImage && <div className='uploadedMediaContainer'>
-                        <div className="mediaBody">
-                           {
-                              mediaType === 'video' ? <div className='video_container'>
-                                 <div style={{ zIndex: '2' }} className='media_edit'> 
-                                    <span>Edit</span>
-                                 </div>
-                                 <div style={{ zIndex: '2' }} onClick={()=>closeMedia('',0)} className='media_close'>
-                                    <svg viewBox="0 0 24 24" className='media_close_svg'>
-                                       <g><path d="M10.59 12L4.54 5.96l1.42-1.42L12 10.59l6.04-6.05 1.42 1.42L13.41 12l6.05 6.04-1.42 1.42L12 13.41l-6.04 6.05-1.42-1.42L10.59 12z"></path></g>
-                                    </svg>
-                                 </div>
-                                 <video style={{ zIndex: '0' }} controls src={selectedImage} className='uploadedMedia'></video>
-                              </div>:
-                                 <div className='imagesContainer'>
-                                    {
-                                       imagesAr.map((idx,key)=>{
-                                          return <div style={hasMultipleImage} className='each_image_div' key={key}>
-                                             <div style={{ zIndex: '2' }} className='media_edit'>
-                                                <span>Edit</span>
-                                             </div>
-                                             <div style={{ zIndex: '2' }} onClick={()=>closeMedia(idx,key)} className='media_close'>
-                                                <svg viewBox="0 0 24 24" className='media_close_svg'>
-                                                   <g><path d="M10.59 12L4.54 5.96l1.42-1.42L12 10.59l6.04-6.05 1.42 1.42L13.41 12l6.05 6.04-1.42 1.42L12 13.41l-6.04 6.05-1.42-1.42L10.59 12z"></path></g>
-                                                </svg>
-                                             </div>
-
-                                             <img src={idx} alt="Selected" style={imgStyle} className='uploadedMedia' key={key} />
-                                          </div>
-                                       })
-                                    }
-                              </div>
-                           }
-                        </div>
-                        <div className="mediaFooter">
-                           <div>
-                              <svg style={{ height: '18px' }} viewBox="0 0 24 24"><g><path d="M5.651 19h12.698c-.337-1.8-1.023-3.21-1.945-4.19C15.318 13.65 13.838 13 12 13s-3.317.65-4.404 1.81c-.922.98-1.608 2.39-1.945 4.19zm.486-5.56C7.627 11.85 9.648 11 12 11s4.373.85 5.863 2.44c1.477 1.58 2.366 3.8 2.632 6.46l.11 1.1H3.395l.11-1.1c.266-2.66 1.155-4.88 2.632-6.46zM12 4c-1.105 0-2 .9-2 2s.895 2 2 2 2-.9 2-2-.895-2-2-2zM8 6c0-2.21 1.791-4 4-4s4 1.79 4 4-1.791 4-4 4-4-1.79-4-4z"></path></g></svg>
-                              <a href='/biryer'>Tag people</a>
-                           </div>
-                           <div>
-                              <svg style={{ height: '18px' }} viewBox="0 0 24 24" ><g><path d="M3 4.5C3 3.12 4.12 2 5.5 2h13C19.88 2 21 3.12 21 4.5v15c0 1.38-1.12 2.5-2.5 2.5h-13C4.12 22 3 20.88 3 19.5v-15zM5.5 4c-.28 0-.5.22-.5.5v15c0 .28.22.5.5.5h13c.28 0 .5-.22.5-.5v-15c0-.28-.22-.5-.5-.5h-13zM16 10H8V8h8v2zm-8 2h8v2H8v-2z"></path></g></svg>
-                              <a href='/biryer'>Add description</a>
-                           </div>
-                        </div>
-                     </div>}
-
-                     {
-                        gifData && <div className="uploadedGifContainer">
-                           <Gif noLink gif={gifData} width={300} />
-                           <span>
-                              <svg onClick={()=>{setGifData(null)}} viewBox="0 0 24 24"><g><path d="M10.59 12L4.54 5.96l1.42-1.42L12 10.59l6.04-6.05 1.42 1.42L13.41 12l6.05 6.04-1.42 1.42L12 13.41l-6.04 6.05-1.42-1.42L10.59 12z"></path></g></svg>
-                           </span>
-                        </div>
-                     }
-
-                     {
-                        questionFlag && <QuestionComponent closeQuestionContainer={closeQuestionContainer} />
-                     }
-
-
-
-
-                     <div className="hp_cnt_right_bottom">
-                        <div className='hp_cnt_right_bottom_content'>
-
-                           {inputclick && <div className="everyone_can_reply">
-                              <div>
-                                 <svg viewBox="0 0 24 24" ><g><path d="M12 1.75C6.34 1.75 1.75 6.34 1.75 12S6.34 22.25 12 22.25 22.25 17.66 22.25 12 17.66 1.75 12 1.75zm-.25 10.48L10.5 17.5l-2-1.5v-3.5L7.5 9 5.03 7.59c1.42-2.24 3.89-3.75 6.72-3.84L11 6l-2 .5L8.5 9l5 1.5-1.75 1.73zM17 14v-3l-1.5-3 2.88-1.23c1.17 1.42 1.87 3.24 1.87 5.23 0 1.3-.3 2.52-.83 3.61L17 14z"></path></g></svg>
-                                 <div>Everyone can reply</div>
-                              </div>
-                           </div>}
-
-                           <nav className="hp_cnt_right_bottom_left" style={iconsInlineStyle}>
-                              <div className='svg_holder'>
-                                 <UploadImage gifAddedProp={gifData || questionFlag ? fadeIcons : {}} mediaUploadFunction={mediaUploadFunction} />
-                                 <div style={fadeIcons} onClick={gifHandler} className="hp_cnt_right_bottom_left_icons">
-                                    <svg viewBox="0 0 24 24"><g><path d="M3 5.5C3 4.119 4.12 3 5.5 3h13C19.88 3 21 4.119 21 5.5v13c0 1.381-1.12 2.5-2.5 2.5h-13C4.12 21 3 19.881 3 18.5v-13zM5.5 5c-.28 0-.5.224-.5.5v13c0 .276.22.5.5.5h13c.28 0 .5-.224.5-.5v-13c0-.276-.22-.5-.5-.5h-13zM18 10.711V9.25h-3.74v5.5h1.44v-1.719h1.7V11.57h-1.7v-.859H18zM11.79 9.25h1.44v5.5h-1.44v-5.5zm-3.07 1.375c.34 0 .77.172 1.02.43l1.03-.86c-.51-.601-1.28-.945-2.05-.945C7.19 9.25 6 10.453 6 12s1.19 2.75 2.72 2.75c.85 0 1.54-.344 2.05-.945v-2.149H8.38v1.032H9.4v.515c-.17.086-.42.172-.68.172-.76 0-1.36-.602-1.36-1.375 0-.688.6-1.375 1.36-1.375z"></path></g></svg>
-                                 </div>
-                                 <div style={fadeIcons} className="hp_cnt_right_bottom_left_icons">
-                                    <svg onClick={questionHandler} viewBox="0 0 24 24"><g><path d="M6 5c-1.1 0-2 .895-2 2s.9 2 2 2 2-.895 2-2-.9-2-2-2zM2 7c0-2.209 1.79-4 4-4s4 1.791 4 4-1.79 4-4 4-4-1.791-4-4zm20 1H12V6h10v2zM6 15c-1.1 0-2 .895-2 2s.9 2 2 2 2-.895 2-2-.9-2-2-2zm-4 2c0-2.209 1.79-4 4-4s4 1.791 4 4-1.79 4-4 4-4-1.791-4-4zm20 1H12v-2h10v2zM7 7c0 .552-.45 1-1 1s-1-.448-1-1 .45-1 1-1 1 .448 1 1z"></path></g></svg>
-                                 </div>
-                                 <div ref={openEmojiRef} onClick={openEmoji} className="hp_cnt_right_bottom_left_icons">
-                                    <svg viewBox="0 0 24 24"><g><path d="M8 9.5C8 8.119 8.672 7 9.5 7S11 8.119 11 9.5 10.328 12 9.5 12 8 10.881 8 9.5zm6.5 2.5c.828 0 1.5-1.119 1.5-2.5S15.328 7 14.5 7 13 8.119 13 9.5s.672 2.5 1.5 2.5zM12 16c-2.224 0-3.021-2.227-3.051-2.316l-1.897.633c.05.15 1.271 3.684 4.949 3.684s4.898-3.533 4.949-3.684l-1.896-.638c-.033.095-.83 2.322-3.053 2.322zm10.25-4.001c0 5.652-4.598 10.25-10.25 10.25S1.75 17.652 1.75 12 6.348 1.75 12 1.75 22.25 6.348 22.25 12zm-2 0c0-4.549-3.701-8.25-8.25-8.25S3.75 7.451 3.75 12s3.701 8.25 8.25 8.25 8.25-3.701 8.25-8.25z"></path></g></svg>
-                                 </div>
-                                 <div className="hp_cnt_right_bottom_left_icons">
-                                    <svg viewBox="0 0 24 24"><g><path d="M6 3V2h2v1h6V2h2v1h1.5C18.88 3 20 4.119 20 5.5v2h-2v-2c0-.276-.22-.5-.5-.5H16v1h-2V5H8v1H6V5H4.5c-.28 0-.5.224-.5.5v12c0 .276.22.5.5.5h3v2h-3C3.12 20 2 18.881 2 17.5v-12C2 4.119 3.12 3 4.5 3H6zm9.5 8c-2.49 0-4.5 2.015-4.5 4.5s2.01 4.5 4.5 4.5 4.5-2.015 4.5-4.5-2.01-4.5-4.5-4.5zM9 15.5C9 11.91 11.91 9 15.5 9s6.5 2.91 6.5 6.5-2.91 6.5-6.5 6.5S9 19.09 9 15.5zm5.5-2.5h2v2.086l1.71 1.707-1.42 1.414-2.29-2.293V13z"></path></g></svg>
-                                 </div>
-                                 <div className="hp_cnt_right_bottom_left_icons">
-                                    <svg viewBox="0 0 24 24" aria-hidden="true" style={{ opacity: '.5', cursor: 'default' }}><g><path d="M12 7c-1.93 0-3.5 1.57-3.5 3.5S10.07 14 12 14s3.5-1.57 3.5-3.5S13.93 7 12 7zm0 5c-.827 0-1.5-.673-1.5-1.5S11.173 9 12 9s1.5.673 1.5 1.5S12.827 12 12 12zm0-10c-4.687 0-8.5 3.813-8.5 8.5 0 5.967 7.621 11.116 7.945 11.332l.555.37.555-.37c.324-.216 7.945-5.365 7.945-11.332C20.5 5.813 16.687 2 12 2zm0 17.77c-1.665-1.241-6.5-5.196-6.5-9.27C5.5 6.916 8.416 4 12 4s6.5 2.916 6.5 6.5c0 4.073-4.835 8.028-6.5 9.27z"></path></g></svg>
-                                 </div>
-                              </div>
-
-
-                              <div style={fillBoundary > 0 ? {display:'flex'}:{display:'none'} } className="addAnotherPost">
-                                 <div style={boundaryStyle} className="boundary">
-                                    <div className="boundary_inner"></div>
-                                 </div>
-                                 <div className="tweet_seperator"></div>
-                                 <div onClick={draftHandler} className="plus_sign">
-                                    <svg viewBox="0 0 24 24" aria-hidden="true"><g><path d="M11 11V4h2v7h7v2h-7v7h-2v-7H4v-2h7z"></path></g></svg>
-                                 </div>
-                              </div>
-
-
-                              <div style={postDivStyle} className="hp_cnt_nav_button">
-                                 <button style={postDivButtonStyle}>Post</button>
-                              </div>
-                           </nav>
-                           {
-                              emojiFlag && <div ref={emojiRef} style={{ width: '352px' }}><EmojiPicker skinTonesDisabled onEmojiClick={emojiHandle} /></div>
-                           }
-
-                        </div>
-                     </div>
+                  
+                  <div
+                     ref={textareaDivRef}
+                     contentEditable
+                     onPaste={onPasteHandler}
+                     className={['ced_style hp_cnt_right_top', !inputValue.length ? 'right_top_before' : ''].join(' ')}
+                     suppressContentEditableWarning
+                     onInput={onInputChange}
+                     onKeyDown={keyDownControl}
+                     onKeyUp={keyUpControl}
+                     spellCheck="false"
+                     // mouse kısmı için
+                     onMouseDown={omd}
+                     onMouseUp={omu}
+                     onSelect={ons}
+                  >
+                     <span></span>
                   </div>
 
                </div>
 
+               {selectedImage && <div className='draftmedia_container'>
+                  <div className="mediaBody">
+                     {
+                        mediaType === 'video' ? <div className='video_container'>
+                           <div style={{ zIndex: '2' }} className='media_edit'> 
+                              <span>Edit</span>
+                           </div>
+                           <div style={{ zIndex: '2' }} onClick={()=>closeMedia('',0)} className='media_close'>
+                              <svg viewBox="0 0 24 24" className='media_close_svg'>
+                                 <g><path d="M10.59 12L4.54 5.96l1.42-1.42L12 10.59l6.04-6.05 1.42 1.42L13.41 12l6.05 6.04-1.42 1.42L12 13.41l-6.04 6.05-1.42-1.42L10.59 12z"></path></g>
+                              </svg>
+                           </div>
+                           <video style={{ zIndex: '0' }} controls src={selectedImage} className='uploadedMedia'></video>
+                        </div>:
+                           <div className='imagesContainer'>
+                              {
+                                 imagesAr.map((idx,key)=>{
+                                    return <div style={hasMultipleImage} className='each_image_div' key={key}>
+                                       <div style={{ zIndex: '2' }} className='media_edit'>
+                                          <span>Edit</span>
+                                       </div>
+                                       <div style={{ zIndex: '2' }} onClick={()=>closeMedia(idx,key)} className='media_close'>
+                                          <svg viewBox="0 0 24 24" className='media_close_svg'>
+                                             <g><path d="M10.59 12L4.54 5.96l1.42-1.42L12 10.59l6.04-6.05 1.42 1.42L13.41 12l6.05 6.04-1.42 1.42L12 13.41l-6.04 6.05-1.42-1.42L10.59 12z"></path></g>
+                                          </svg>
+                                       </div>
+
+                                       <img src={idx} alt="Selected" style={imgStyle} className='uploadedMedia' key={key} />
+                                    </div>
+                                 })
+                              }
+                        </div>
+                     }
+                  </div>
+                  <div className="mediaFooter">
+                     <div>
+                        <svg style={{ height: '18px' }} viewBox="0 0 24 24"><g><path d="M5.651 19h12.698c-.337-1.8-1.023-3.21-1.945-4.19C15.318 13.65 13.838 13 12 13s-3.317.65-4.404 1.81c-.922.98-1.608 2.39-1.945 4.19zm.486-5.56C7.627 11.85 9.648 11 12 11s4.373.85 5.863 2.44c1.477 1.58 2.366 3.8 2.632 6.46l.11 1.1H3.395l.11-1.1c.266-2.66 1.155-4.88 2.632-6.46zM12 4c-1.105 0-2 .9-2 2s.895 2 2 2 2-.9 2-2-.895-2-2-2zM8 6c0-2.21 1.791-4 4-4s4 1.79 4 4-1.791 4-4 4-4-1.79-4-4z"></path></g></svg>
+                        <a href='/biryer'>Tag people</a>
+                     </div>
+                     <div>
+                        <svg style={{ height: '18px' }} viewBox="0 0 24 24" ><g><path d="M3 4.5C3 3.12 4.12 2 5.5 2h13C19.88 2 21 3.12 21 4.5v15c0 1.38-1.12 2.5-2.5 2.5h-13C4.12 22 3 20.88 3 19.5v-15zM5.5 4c-.28 0-.5.22-.5.5v15c0 .28.22.5.5.5h13c.28 0 .5-.22.5-.5v-15c0-.28-.22-.5-.5-.5h-13zM16 10H8V8h8v2zm-8 2h8v2H8v-2z"></path></g></svg>
+                        <a href='/biryer'>Add description</a>
+                     </div>
+                  </div>
+               </div>}
+
+               {
+                  gifData && <div className="uploadedGifContainer draftgif_container">
+                     <Gif noLink gif={gifData} width={300} />
+                     <span>
+                        <svg onClick={() => { setGifData(null) }} viewBox="0 0 24 24"><g><path d="M10.59 12L4.54 5.96l1.42-1.42L12 10.59l6.04-6.05 1.42 1.42L13.41 12l6.05 6.04-1.42 1.42L12 13.41l-6.04 6.05-1.42-1.42L10.59 12z"></path></g></svg>
+                     </span>
+                  </div>
+               }
+
+               {
+                  questionFlag && <div className='draftquestion_container'><QuestionComponent closeQuestionContainer={closeQuestionContainer} /></div>
+               }
+
 
             </div>
 
+            {/* {
+                props.showEl &&  */}
+                
+                <div style={props.showEl ? {minHeight:'92px'}:{minHeight:'0px'}} className="homepage_content_body_wih_right footer_container" >
+                  <div className='footer_inner_container'>
+                     {inputclick && <div style={{width:'100%'}} className="everyone_can_reply">
+                        <div>
+                           <svg viewBox="0 0 24 24" ><g><path d="M12 1.75C6.34 1.75 1.75 6.34 1.75 12S6.34 22.25 12 22.25 22.25 17.66 22.25 12 17.66 1.75 12 1.75zm-.25 10.48L10.5 17.5l-2-1.5v-3.5L7.5 9 5.03 7.59c1.42-2.24 3.89-3.75 6.72-3.84L11 6l-2 .5L8.5 9l5 1.5-1.75 1.73zM17 14v-3l-1.5-3 2.88-1.23c1.17 1.42 1.87 3.24 1.87 5.23 0 1.3-.3 2.52-.83 3.61L17 14z"></path></g></svg>
+                           <div>Everyone can reply</div>
+                        </div>
+                     </div>}
+
+                     <nav className="hp_cnt_right_bottom_left" style={iconsInlineStyle}>
+                        <div className='svg_holder'>
+                           <UploadImage gifAddedProp={gifData || questionFlag || imagesAr.length >= 4 ? fadeIcons : {}} mediaUploadFunction={mediaUploadFunction} />
+                           <div style={fadeIcons} onClick={gifHandler} className="hp_cnt_right_bottom_left_icons">
+                              <svg viewBox="0 0 24 24"><g><path d="M3 5.5C3 4.119 4.12 3 5.5 3h13C19.88 3 21 4.119 21 5.5v13c0 1.381-1.12 2.5-2.5 2.5h-13C4.12 21 3 19.881 3 18.5v-13zM5.5 5c-.28 0-.5.224-.5.5v13c0 .276.22.5.5.5h13c.28 0 .5-.224.5-.5v-13c0-.276-.22-.5-.5-.5h-13zM18 10.711V9.25h-3.74v5.5h1.44v-1.719h1.7V11.57h-1.7v-.859H18zM11.79 9.25h1.44v5.5h-1.44v-5.5zm-3.07 1.375c.34 0 .77.172 1.02.43l1.03-.86c-.51-.601-1.28-.945-2.05-.945C7.19 9.25 6 10.453 6 12s1.19 2.75 2.72 2.75c.85 0 1.54-.344 2.05-.945v-2.149H8.38v1.032H9.4v.515c-.17.086-.42.172-.68.172-.76 0-1.36-.602-1.36-1.375 0-.688.6-1.375 1.36-1.375z"></path></g></svg>
+                           </div>
+                           <div style={fadeIcons} className="hp_cnt_right_bottom_left_icons">
+                              <svg onClick={questionHandler} viewBox="0 0 24 24"><g><path d="M6 5c-1.1 0-2 .895-2 2s.9 2 2 2 2-.895 2-2-.9-2-2-2zM2 7c0-2.209 1.79-4 4-4s4 1.791 4 4-1.79 4-4 4-4-1.791-4-4zm20 1H12V6h10v2zM6 15c-1.1 0-2 .895-2 2s.9 2 2 2 2-.895 2-2-.9-2-2-2zm-4 2c0-2.209 1.79-4 4-4s4 1.791 4 4-1.79 4-4 4-4-1.791-4-4zm20 1H12v-2h10v2zM7 7c0 .552-.45 1-1 1s-1-.448-1-1 .45-1 1-1 1 .448 1 1z"></path></g></svg>
+                           </div>
+                           <div ref={openEmojiRef} onClick={openEmoji} className="hp_cnt_right_bottom_left_icons">
+                              <svg viewBox="0 0 24 24"><g><path d="M8 9.5C8 8.119 8.672 7 9.5 7S11 8.119 11 9.5 10.328 12 9.5 12 8 10.881 8 9.5zm6.5 2.5c.828 0 1.5-1.119 1.5-2.5S15.328 7 14.5 7 13 8.119 13 9.5s.672 2.5 1.5 2.5zM12 16c-2.224 0-3.021-2.227-3.051-2.316l-1.897.633c.05.15 1.271 3.684 4.949 3.684s4.898-3.533 4.949-3.684l-1.896-.638c-.033.095-.83 2.322-3.053 2.322zm10.25-4.001c0 5.652-4.598 10.25-10.25 10.25S1.75 17.652 1.75 12 6.348 1.75 12 1.75 22.25 6.348 22.25 12zm-2 0c0-4.549-3.701-8.25-8.25-8.25S3.75 7.451 3.75 12s3.701 8.25 8.25 8.25 8.25-3.701 8.25-8.25z"></path></g></svg>
+                           </div>
+                           <div className="hp_cnt_right_bottom_left_icons">
+                              <svg viewBox="0 0 24 24"><g><path d="M6 3V2h2v1h6V2h2v1h1.5C18.88 3 20 4.119 20 5.5v2h-2v-2c0-.276-.22-.5-.5-.5H16v1h-2V5H8v1H6V5H4.5c-.28 0-.5.224-.5.5v12c0 .276.22.5.5.5h3v2h-3C3.12 20 2 18.881 2 17.5v-12C2 4.119 3.12 3 4.5 3H6zm9.5 8c-2.49 0-4.5 2.015-4.5 4.5s2.01 4.5 4.5 4.5 4.5-2.015 4.5-4.5-2.01-4.5-4.5-4.5zM9 15.5C9 11.91 11.91 9 15.5 9s6.5 2.91 6.5 6.5-2.91 6.5-6.5 6.5S9 19.09 9 15.5zm5.5-2.5h2v2.086l1.71 1.707-1.42 1.414-2.29-2.293V13z"></path></g></svg>
+                           </div>
+                           <div className="hp_cnt_right_bottom_left_icons">
+                              <svg viewBox="0 0 24 24" aria-hidden="true" style={{ opacity: '.5', cursor: 'default' }}><g><path d="M12 7c-1.93 0-3.5 1.57-3.5 3.5S10.07 14 12 14s3.5-1.57 3.5-3.5S13.93 7 12 7zm0 5c-.827 0-1.5-.673-1.5-1.5S11.173 9 12 9s1.5.673 1.5 1.5S12.827 12 12 12zm0-10c-4.687 0-8.5 3.813-8.5 8.5 0 5.967 7.621 11.116 7.945 11.332l.555.37.555-.37c.324-.216 7.945-5.365 7.945-11.332C20.5 5.813 16.687 2 12 2zm0 17.77c-1.665-1.241-6.5-5.196-6.5-9.27C5.5 6.916 8.416 4 12 4s6.5 2.916 6.5 6.5c0 4.073-4.835 8.028-6.5 9.27z"></path></g></svg>
+                           </div>
+                        </div>
+
+
+                        <div style={fillBoundary > 0 ? {display:'flex'}:{display:'none'} } className="addAnotherPost">
+                           <div style={boundaryStyle} className="boundary">
+                              <div className="boundary_inner"></div>
+                           </div>
+                           <div className="tweet_seperator"></div>
+                           <div ref={addNewDraftRef} onClick={addDraftHandler} className="plus_sign">
+                              <svg viewBox="0 0 24 24" aria-hidden="true"><g><path d="M11 11V4h2v7h7v2h-7v7h-2v-7H4v-2h7z"></path></g></svg>
+                           </div>
+                        </div>
+
+
+                        <div style={postDivStyle} className="hp_cnt_nav_button postall_btn">
+                           <button style={postDivButtonStyle}>Post all</button>
+                        </div>
+                     </nav>
+
+
+                  </div>
+               </div>
          </div>
+
+
+
       </div>
-
-      { gifFlag && <>
-         <GifComponent gifDataProp={gifDataProp} closeGifContainer={closeGifContainer} />
-         <BackDrop />
-      </>
-      }
-
       {
-         draftFlag && createPortal(
-            <>
-               <Draft />
-               <BackDrop />
-            </>,
+         emojiFlag && createPortal(
+             <div style={emojiPos} className='draft_emoji' ref={emojiRef}>
+               <EmojiPicker skinTonesDisabled onEmojiClick={emojiHandle} />
+            </div>,
             document.getElementById('layers')
          )
       }
 
+      { gifFlag && createPortal(
+         <>
+            <GifComponent gifDataProp={gifDataProp} closeGifContainer={closeGifContainer} />
+         </>,
+         document.getElementById('layers'))
+      }
+
+
    </>
-   
+
 }
+
 
 export default RichTextBox
 
