@@ -1,26 +1,41 @@
 import '../../Styles/UserRoutesCss/HomePage.css'
-import { useNavigate } from 'react-router-dom'
+import { useFetcher, useNavigate } from 'react-router-dom'
 import MainRichTextBox from './HomePageSubFolders/MainRichTextBox'
 import Header from './HomePageSubFolders/Headers'
 import Rightbar from './RightBar'
+import Flow from './HomePageSubFolders/Flow'
+import { useEffect } from 'react'
+import { useSelector } from 'react-redux'
 
-import { useState } from 'react'
+/*
+useEffect(()=>{
+   setTimeout(() => {
+      isLogged() // buraya bekleme efekti koy
+   }, 1500);
+},[])
 
+const isLogged = async () => {
+   let response = await fetch('http://localhost:4000/api/v1/islogged', {
+      method: 'GET',
+      credentials: 'include'
+   })
+   if (response.status !== 200) {
+      navigate('/login')
+      return
+   }
+}
+*/
 
 const HomePage = () => {
-
    const navigate = useNavigate()
 
-   const isLogged = async () => {
-      let response = await fetch('http://localhost:4000/api/v1/islogged', {
-         method: 'GET',
-         credentials: 'include'
-      })
-      if (response.status !== 200) {
-         navigate('/login')
-         return
-      }
-   }
+   const postAr = useSelector(state => state.posts)
+   console.log(postAr);
+
+
+
+
+
 
 
 
@@ -30,6 +45,8 @@ const HomePage = () => {
             <Header />
 
             <MainRichTextBox />
+
+            <Flow />
 
          </div>
 

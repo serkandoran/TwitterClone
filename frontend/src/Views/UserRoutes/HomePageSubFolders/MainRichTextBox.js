@@ -8,7 +8,7 @@ import BackDrop from '../../BackDrop'
 import { Gif } from '@giphy/react-components'
 import Draft from './Draft'
 import { createPortal } from 'react-dom'
-import { useDispatch } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 
 
 const MainRichTextBox = () => {
@@ -25,12 +25,10 @@ const MainRichTextBox = () => {
    const [mousePressing, setMousePressing] = useState(false)
    let stopReleasing = false
    let outOfContent = false
-   const [selectedImage, setSelectedImage] = useState(null)
-   const [imagesAr, setImagesAr] = useState([])
-   const [mediaType, setMediaType] = useState(null)
+   const [mediaAr, setMediaAr] = useState([])
+
 
    const [gifFlag, setGifFlag] = useState(false)
-   const [gifData, setGifData] = useState(null)
 
    const [questionFlag, setQuestionFlag] = useState(false)
    const [fillBoundary, setFillBoundary] = useState(0)
@@ -51,12 +49,6 @@ const MainRichTextBox = () => {
       }
    }, [])
 
-   useEffect(() => {
-      if (!imagesAr.length) {
-         setMediaType(null)
-         setSelectedImage(null)
-      }
-   }, [imagesAr])
 
    useEffect(() => {
       const handleMouseUp = (e) => {
@@ -113,14 +105,14 @@ const MainRichTextBox = () => {
       cursor: inputValue === '' ? 'default' : 'pointer'
    }
    const fadeIcons = {
-      opacity: gifData || questionFlag || imagesAr.length >= 4 ? '0.4' : '',
-      pointerEvents: gifData || questionFlag || imagesAr.length >= 4 ? 'none' : '',
+      opacity: questionFlag || mediaAr.length >= 4 ? '0.4' : '',
+      pointerEvents: questionFlag || mediaAr.length >= 4 ? 'none' : '',
    }
    const hasMultipleImage = {
-      width: imagesAr.length > 1 && 'calc(50% - 16px)'
+      width: mediaAr.length > 1 && 'calc(50% - 16px)'
    }
    const imgStyle = {
-      height: imagesAr.length > 1 && '300px'
+      height: mediaAr.length > 1 && '300px'
    }
    const boundaryStyle = {
       background: `conic-gradient(${fillBoundary < validTextLength && ((360 * fillBoundary / validTextLength) * 100 / 360) < 80 ? 'rgb(29, 155, 240)' : ((360 * fillBoundary / validTextLength) * 100 / 360) >= 80 && fillBoundary < validTextLength ? 'rgb(255, 212, 0)' : 'rgb(253,0,0)'}${360 * fillBoundary / validTextLength}deg, rgb(239, 243, 244) 0deg)`,
@@ -454,32 +446,36 @@ const MainRichTextBox = () => {
          setMousePressing(false)
       }
    }
-
-
    const mediaUploadFunction = (selectedFile) => {
       // image/jpeg
       // video/mp4
-
+      
       if (!selectedFile) return
 
-      selectedFile.type.split('/')[0] === 'video' && setMediaType('video') // video ve image dışı bir şey girilemez
+      let mtype = selectedFile.type.split('/')[0]
+
       const reader = new FileReader()
       reader.onload = () => {
-         setSelectedImage(reader.result)
-
-         setImagesAr(prev => [...prev, reader.result])
+         setMediaAr(prev => [...prev, {
+            mtype: mtype,
+            mdata: reader.result
+         }
+      ])
       }
       reader.readAsDataURL(selectedFile)
    }
    const closeMedia = (key, idx) => {
-      setImagesAr(prev => prev.filter((el, val) => val !== idx))
+      setMediaAr(prev => prev.filter((el, val) => val !== idx))
    }
    const gifHandler = () => {
       setGifFlag(true)
    }
    const gifDataProp = (val) => {
       setGifFlag(false)
-      setGifData(val)
+      setMediaAr(prev => [...prev,{
+         mtype: 'gif',
+         mdata: val
+      }])
    }
    const closeGifContainer = () => {
       setGifFlag(false)
@@ -491,19 +487,35 @@ const MainRichTextBox = () => {
       setQuestionFlag(false)
    }
    const draftHandler = (e) => {
+      let newAr = [
+         { text: textareaDivRef.current.textContent, mediaContent: [...mediaAr] },
+         { text: '', mediaContent: [] }
+      ]
       dispatch({
-         type: 'INPUT_FIELD',
-         payload: [...[textareaDivRef.current.textContent],...['']]
+         type: 'UPDATE_DRAFT',
+         payload: [...newAr]
       })
       setDraftFlag(true)
    }
    const closeDraftHandler = () => {
+      setMediaAr([])
       setDraftFlag(false)
       textareaDivRef.current.textContent = ''
       let span = document.createElement('span')
       textareaDivRef.current.appendChild(span)
       setFillBoundary(0)
       setcaretstate(0)
+      textareaDivRef.current.focus()
+   }
+   const postTweet = ()=>{
+      // dispatch({
+      //    type: 'ADD_POST',
+      //    payload: {
+      //       // id vericen
+      //       description: 'yeni desc1',
+      //       // type:
+      //    }
+      // })
    }
 
 
@@ -536,38 +548,33 @@ const MainRichTextBox = () => {
                         <span></span>
                      </div>
 
-                     {selectedImage && <div className='uploadedMediaContainer'>
+                     {mediaAr.length > 0 && <div className='uploadedMediaContainer'>
                         <div className="mediaBody">
                            {
-                              mediaType === 'video' ? <div className='video_container'>
-                                 <div style={{ zIndex: '2' }} className='media_edit'>
-                                    <span>Edit</span>
-                                 </div>
-                                 <div style={{ zIndex: '2' }} onClick={() => closeMedia('', 0)} className='media_close'>
-                                    <svg viewBox="0 0 24 24" className='media_close_svg'>
-                                       <g><path d="M10.59 12L4.54 5.96l1.42-1.42L12 10.59l6.04-6.05 1.42 1.42L13.41 12l6.05 6.04-1.42 1.42L12 13.41l-6.04 6.05-1.42-1.42L10.59 12z"></path></g>
-                                    </svg>
-                                 </div>
-                                 <video style={{ zIndex: '0' }} controls src={selectedImage} className='uploadedMedia'></video>
-                              </div> :
-                                 <div className='imagesContainer'>
-                                    {
-                                       imagesAr.map((idx, key) => {
-                                          return <div style={hasMultipleImage} className='each_image_div' key={key}>
-                                             <div style={{ zIndex: '2' }} className='media_edit'>
-                                                <span>Edit</span>
-                                             </div>
-                                             <div style={{ zIndex: '2' }} onClick={() => closeMedia(idx, key)} className='media_close'>
-                                                <svg viewBox="0 0 24 24" className='media_close_svg'>
-                                                   <g><path d="M10.59 12L4.54 5.96l1.42-1.42L12 10.59l6.04-6.05 1.42 1.42L13.41 12l6.05 6.04-1.42 1.42L12 13.41l-6.04 6.05-1.42-1.42L10.59 12z"></path></g>
-                                                </svg>
-                                             </div>
-
-                                             <img src={idx} alt="Selected" style={imgStyle} className='uploadedMedia' key={key} />
+                              <div className='imagesContainer'>
+                                 {
+                                    mediaAr.map((item, key) => {
+                                       return <div style={hasMultipleImage} className='each_image_div' key={key}>
+                                          <div style={{ zIndex: '2' }} className='media_edit'>
+                                             <span>Edit</span>
                                           </div>
-                                       })
-                                    }
-                                 </div>
+                                          <div style={{ zIndex: '2' }} onClick={() => closeMedia(item, key)} className='media_close'>
+                                             <svg viewBox="0 0 24 24" className='media_close_svg'>
+                                                <g><path d="M10.59 12L4.54 5.96l1.42-1.42L12 10.59l6.04-6.05 1.42 1.42L13.41 12l6.05 6.04-1.42 1.42L12 13.41l-6.04 6.05-1.42-1.42L10.59 12z"></path></g>
+                                             </svg>
+                                          </div>
+
+                                          {
+                                             item.mtype === 'image' ? <img src={item.mdata} alt="Selected" style={imgStyle} className='uploadedMedia' key={key} /> :
+                                                item.mtype === 'video' ? <video style={{ zIndex: '0',objectFit:'fill !important' }} controls src={item.mdata} className='uploadedMedia' key={key}></video> : 
+                                                            <div className="uploadedGifContainer">
+                                                               <Gif noLink gif={item.mdata} />
+                                                            </div>
+                                          }
+                                       </div>
+                                    })
+                                 }
+                              </div>
                            }
                         </div>
                         <div className="mediaFooter">
@@ -582,14 +589,6 @@ const MainRichTextBox = () => {
                         </div>
                      </div>}
 
-                     {
-                        gifData && <div className="uploadedGifContainer">
-                           <Gif noLink gif={gifData} width={300} />
-                           <span>
-                              <svg onClick={() => { setGifData(null) }} viewBox="0 0 24 24"><g><path d="M10.59 12L4.54 5.96l1.42-1.42L12 10.59l6.04-6.05 1.42 1.42L13.41 12l6.05 6.04-1.42 1.42L12 13.41l-6.04 6.05-1.42-1.42L10.59 12z"></path></g></svg>
-                           </span>
-                        </div>
-                     }
 
                      {
                         questionFlag && <QuestionComponent closeQuestionContainer={closeQuestionContainer} />
@@ -610,7 +609,7 @@ const MainRichTextBox = () => {
 
                            <nav className="hp_cnt_right_bottom_left" style={iconsInlineStyle}>
                               <div className='svg_holder'>
-                                 <UploadImage gifAddedProp={gifData || questionFlag || imagesAr.length >= 4 ? fadeIcons : {}} mediaUploadFunction={mediaUploadFunction} />
+                                 <UploadImage gifAddedProp={questionFlag || mediaAr.length >= 4 ? fadeIcons : {}} mediaUploadFunction={mediaUploadFunction} />
                                  <div style={fadeIcons} onClick={gifHandler} className="hp_cnt_right_bottom_left_icons">
                                     <svg viewBox="0 0 24 24"><g><path d="M3 5.5C3 4.119 4.12 3 5.5 3h13C19.88 3 21 4.119 21 5.5v13c0 1.381-1.12 2.5-2.5 2.5h-13C4.12 21 3 19.881 3 18.5v-13zM5.5 5c-.28 0-.5.224-.5.5v13c0 .276.22.5.5.5h13c.28 0 .5-.224.5-.5v-13c0-.276-.22-.5-.5-.5h-13zM18 10.711V9.25h-3.74v5.5h1.44v-1.719h1.7V11.57h-1.7v-.859H18zM11.79 9.25h1.44v5.5h-1.44v-5.5zm-3.07 1.375c.34 0 .77.172 1.02.43l1.03-.86c-.51-.601-1.28-.945-2.05-.945C7.19 9.25 6 10.453 6 12s1.19 2.75 2.72 2.75c.85 0 1.54-.344 2.05-.945v-2.149H8.38v1.032H9.4v.515c-.17.086-.42.172-.68.172-.76 0-1.36-.602-1.36-1.375 0-.688.6-1.375 1.36-1.375z"></path></g></svg>
                                  </div>
@@ -640,7 +639,7 @@ const MainRichTextBox = () => {
                               </div>
 
 
-                              <div style={postDivStyle} className="hp_cnt_nav_button">
+                              <div onClick={postTweet} style={postDivStyle} className="hp_cnt_nav_button">
                                  <button style={postDivButtonStyle}>Post</button>
                               </div>
                            </nav>

@@ -9,7 +9,7 @@ import BackDrop2 from '../../BackDrop2'
 
 
 const Draft = (props)=>{
-   const richTB = useSelector(state => state.ui.inputField)
+   let richTB = useSelector(state => state.ui.inputField)
    const dispatch = useDispatch()
 
    const [focusedEl, setFocusedEl] = useState(richTB.length-1)
@@ -18,17 +18,51 @@ const Draft = (props)=>{
    const btnRef = useRef()
    const [inpFlag, setInpFlag] = useState(false)
    const [canPost, setCanPost] = useState(true)
+   const draft_container = useRef()
 
 
+   useEffect(()=>{
+      window.scroll(0,0)
+   })
+   // useEffect(()=>{
+   //    // .pause() --- .play()
+   //    // let ar = [...draft_container.current.querySelectorAll('.homepage_content_body')]
+
+
+   // },[focusedEl])
+
+   const checkBounds = ()=>{
+      let boundflag = true
+      for (let i = 0; i < richTB.length; i++) {
+         if(Array.from(richTB[i].text).length === 0 || Array.from(richTB[i].text).length > props.validTextLength){
+            boundflag = false
+         }
+      }
+      setCanPost(boundflag)
+   }
    const closeDraftsHandler = ()=>{
       setDiscard(true)
    }
    const whichEl = (val)=>{
       setFocusedEl(val)
    }
+   const clearImage = (wEl, wMediaIdx)=>{
+
+      let newAr = [...richTB]
+      let newinner = newAr[wEl].mediaContent.filter((el, idx) => idx !== wMediaIdx)
+      newAr[wEl].mediaContent = newinner
+
+      dispatch({
+         type:'UPDATE_DRAFT',
+         payload: [...newAr]
+      })
+
+
+   }
    const discardHandler = (e)=>{
       dispatch({
-         type:'CLEAR_INPUT',
+         type:'UPDATE_DRAFT',
+         payload: []
       })
       props.closeDraftHandler()
    }
@@ -42,77 +76,33 @@ const Draft = (props)=>{
       }
    }
 
-   useEffect(()=>{
-      setCanPost(true)
-      for(let i=0; i<richTB.length; i++){
-         if(Array.from(richTB[i]).length === 0 || Array.from(richTB[i]).length > props.validTextLength){
-            setCanPost(false)
-         }
-      }
-   })
 
-   const addedNewField = (elidx, content)=>{
+   const addedNewField = (elidx, content, medias)=>{
       let newAr = [...richTB]
-      newAr[elidx] = content
-      let emptyElementIdx
-      for(let i=0; i<newAr.length;i++){
-         if(newAr[i].length === 0){
-            emptyElementIdx = i
-         }
-      }
-      // hafif tıklayınca focus oluyo ama opacity değişmiyor
-      // hafif tıklayınca focus oluyo ama opacity değişmiyor
-      // hafif tıklayınca focus oluyo ama opacity değişmiyor
-      // hafif tıklayınca focus oluyo ama opacity değişmiyor
-      // hafif tıklayınca focus oluyo ama opacity değişmiyor
-      // hafif tıklayınca focus oluyo ama opacity değişmiyor
-      // hafif tıklayınca focus oluyo ama opacity değişmiyor
-      // hafif tıklayınca focus oluyo ama opacity değişmiyor
-      // hafif tıklayınca focus oluyo ama opacity değişmiyor
-      // hafif tıklayınca focus oluyo ama opacity değişmiyor
-      // hafif tıklayınca focus oluyo ama opacity değişmiyor
-      // hafif tıklayınca focus oluyo ama opacity değişmiyor
 
+      newAr[elidx].mediaContent = [...medias]
+      newAr[elidx].text = content
 
-      if(emptyElementIdx){
-         newAr = [...newAr.slice(0,emptyElementIdx),...newAr.slice(emptyElementIdx+1)] // silme
-         newAr = [...newAr.slice(0,elidx+1),'',...newAr.slice(elidx+1)] // ekleme
-      }else{
-         newAr = [...newAr.slice(0,elidx+1),'',...newAr.slice(elidx+1)]
-      }
+      let newEl = {text:'', mediaContent: []}
+      newAr.splice(elidx+1, 0, newEl)
 
-      let emptyElCount = 0
-      let firstEmpty = []
-      for(let i=0; i<newAr.length;i++){
-         if(newAr[i].length === 0){
-            firstEmpty.push(i)
-            emptyElCount+=1
-         }
-      }
-      if(emptyElCount > 1){
-         firstEmpty = Math.min(parseInt(firstEmpty.join(' ')))
-         newAr = [
-            ...newAr.slice(0, firstEmpty+1),
-            ...newAr.slice(firstEmpty+1).filter((el)=> el.length !== 0)
-         ]
-      }
-
-      if(elidx+1 >= newAr.length){
-         newAr = [...newAr.filter((el)=>el.length > 0),'']
-         elidx = newAr.length-2
-      }
+      newAr = newAr.filter((el,idx)=>{
+         return el.text.length > 0 || idx === elidx+1
+      })
 
       dispatch({
-         type: 'INPUT_FIELD',
+         type: 'UPDATE_DRAFT',
          payload: [...newAr]
       })
+
+      if(elidx+1 === newAr.length) elidx-=1
+
+
       setFocusedEl(elidx+1)
       setInpFlag(true)
    }
 
-
-   return <div onClick={clickHandler} className='draft_container'>
-
+   return <div onClick={clickHandler} className='draft_container' ref={draft_container}>
       <div className="draft_header">
          <div onClick={closeDraftsHandler} className='close_draft'>
             <svg viewBox="0 0 24 24" aria-hidden="true"><g><path d="M10.59 12L4.54 5.96l1.42-1.42L12 10.59l6.04-6.05 1.42 1.42L13.41 12l6.05 6.04-1.42 1.42L12 13.41l-6.04 6.05-1.42-1.42L10.59 12z"></path></g></svg>
@@ -123,16 +113,19 @@ const Draft = (props)=>{
       {
          richTB.map((el,idx)=>{
             return <RichTextBox
-                     clearInput = {()=>setInpFlag(false)}
-                     inpFlag = {inpFlag}
-                     elContent = {richTB[idx]}
-                     elidx={idx}
-                     whichEl={()=>whichEl(idx)}
-                     key={idx}
-                     showEl={idx == focusedEl ? true : false}
-                     addedNewField={(elidx,content)=> addedNewField(elidx=idx,content)}
-                     canPost = {canPost}
-                  />
+               key = {idx}
+               clearInput={() => setInpFlag(false)}
+               el = {el}
+               inpFlag = {inpFlag}
+               elidx = {idx}
+               whichEl = {()=>whichEl(idx)}
+               showEl = {idx === focusedEl ? true : false}
+               addedNewField={(elidx, content, medias) => addedNewField(elidx = idx, content, medias)}
+               clearImage = {clearImage}
+               canPost = {canPost}
+               wholeAr={richTB}
+               checkBounds = {checkBounds}
+            />
          })
       }
       {
@@ -160,4 +153,3 @@ const Draft = (props)=>{
 
 
 export default Draft
-

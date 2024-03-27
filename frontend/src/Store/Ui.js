@@ -5,11 +5,7 @@ const ui_state = {
       '',
       ''
    ],
-   inputField: [
-   ],
-   temp: [
-
-   ]
+   inputField: []
 }
 
 const uiReducer = (state = ui_state, action) => {
@@ -21,17 +17,10 @@ const uiReducer = (state = ui_state, action) => {
                ...action.payload
             ]
          }
-      case 'INPUT_FIELD':
+      case 'UPDATE_DRAFT':
          return{
             ...state,
-            inputField: [
-               ...action.payload
-            ]
-         }
-      case 'CLEAR_INPUT':
-         return{
-            ...state,
-            inputField: []
+            inputField: [...action.payload]
          }
       default:
          return state;

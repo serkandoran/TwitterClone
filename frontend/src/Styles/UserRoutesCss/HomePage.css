@@ -21,6 +21,7 @@
    box-sizing: border-box;
    flex-basis: auto;
    flex-direction: column;
+   border-bottom: 1px solid rgba(239, 243, 244, 1);
 }
 
 .homepage_container_content>div {
@@ -338,8 +339,11 @@
    font-size: 17px;
    background-color: rgb(29, 155, 240);
    margin-right: 18px;
+   transition: background-color .15s ease-in-out;
 }
-
+.hp_cnt_nav_button:hover{
+   background-color: rgb(26, 140, 216);
+}
 .hp_cnt_nav_button>button {
    display: block;
    background-color: transparent;
@@ -512,7 +516,8 @@
    display: flex;
    justify-content: flex-start;
    position: relative;
-   width: 504px;
+   max-height: 280px !important;
+   min-height: 280px !important;
 }
 .uploadedGifContainer>div{
    width: 100% !important;
@@ -606,4 +611,7 @@
    color: rgb(255, 212, 0);
 }
 
-
+video{
+   min-height: 300px !important;
+   object-fit: cover;
+}

@@ -67,10 +67,15 @@
 .draftgif_container{
    margin-left: 50px;
    margin-right: 6px;
+   width: 90% !important;
+   position: relative;
 }
-.draftquestion_container{
+.draftgif_container>div{
+   height: 100%;
+   max-height: 280px !important;
+}
+.dq_margin{
    margin-left: 50px;
-   margin-right: 6px;
 }
 .left_line{
    background-color: rgba(207, 217, 222, 1.00);
@@ -87,8 +92,19 @@
    position: absolute;
 }
 
-
-
-
+.mbgap{
+   gap: 1rem;
+   flex-wrap: wrap;
+   gap: .3rem;
+}
+.umCollapse{
+   height: 100%;
+}
+.w5{
+   width: calc(50% - 8px);
+}
+.w5>div{
+   width: 100% !important;
+}
 
 
